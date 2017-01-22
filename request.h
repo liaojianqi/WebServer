@@ -41,7 +41,11 @@ namespace webserver{
                 std::getline(in,line);
                 line.pop_back();
             }
-            //解析post参数
+        }
+        /* 解析post参数 */
+        void parse_parameters(std::istream &in){
+            std::string line;
+            std::vector<std::string> v;
             std::getline(in,line);
             line.pop_back();
             this->split(line,'&',v);
