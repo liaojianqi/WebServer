@@ -10,12 +10,15 @@ namespace webserver{
     class Request{
     public:
         std::string method, path, version;//请求方法，请求路径，http版本
+        
+        
         /* 解析请求 */
         void parse_from_istream(std::istream &in){
             //解析首行
             std::string line;
             std::getline(in,line);
             line.pop_back();
+            std::cout<<line<<std::endl;
             std::vector<std::string> v;
             this->split(line,' ',v);
             this->method = v[0];
@@ -36,18 +39,20 @@ namespace webserver{
             std::getline(in,line);
             line.pop_back();
             while(line.size() > 0){
+                std::cout<<line<<std::endl;
                 this->split(line,':',v);
                 header[v[0]] = v[1].substr(1);
                 std::getline(in,line);
                 line.pop_back();
             }
+            std::cout<<std::endl;
         }
         /* 解析post参数 */
         void parse_parameters(std::istream &in){
             std::string line;
             std::vector<std::string> v;
             std::getline(in,line);
-            line.pop_back();
+            std::cout<<line<<std::endl;
             this->split(line,'&',v);
             for(int i=0;i<v.size();i++){
                 int location_equal = v[i].find('=');
