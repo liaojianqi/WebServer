@@ -5,10 +5,15 @@
 #include <string>
 #include <unordered_map>
 #include <functional>
-#include <boost/asio.hpp>
 #include "request.h"
+#include "response.h"
+#include "boost/asio.hpp"
 
 namespace webserver{
+    typedef boost::asio::io_service Ios;
+    typedef boost::asio::ip::tcp::endpoint Endpoint;
+    typedef boost::asio::ip::tcp::acceptor Acceptor;
+    typedef boost::asio::ip::tcp::socket Socket;
     class Server{
         private:
             //监听端口
@@ -18,102 +23,83 @@ namespace webserver{
             Server(unsigned short _port):port(_port){}
             /* 启动服务器 */
             void start(){
-                boost::asio::io_service ios;
-                boost::asio::ip::tcp::endpoint ep(boost::asio::ip::address_v4::any() ,port);
-                boost::asio::ip::tcp::acceptor server(ios, ep.protocol());
+                Ios ios;
+                Endpoint ep(boost::asio::ip::address_v4::any() ,port);
+                Acceptor server(ios, ep.protocol());
                 server.bind(ep);
                 server.listen();
-                while(true){
-                    boost::asio::ip::tcp::socket client(ios);
-                    server.accept(client);
-                    std::cout<<"一个客户端建立连接"<<std::endl;
-                    process(client);
-                }
+                
+                do_accept(server,ios);
+                ios.run();
             }
-            /* 404 not found */
-            void not_found(std::ostream &out){
-                add_header(out,404);
-                out<<"<html><head></head><body><h1 align = 'center'>404 Not found!</h1></body></html>";
-            }
-            /* 添加http头信息 */
-            void add_header(std::ostream &out, int status_code){
-                out<<"HTTP/1.1 "<<status_code;
-                switch(status_code){
-                    case 200:out<<"OK\r\n";break;
-                    case 404:out<<"NOT FOUND\r\n";break;
-                    default:break;
-                }
-                out<<"Server:loin/0.1 deepin15.3\r\n";
-                out<<"\r\n";
-            }
-            /* 做出响应 */
-            void do_response(const Request &req, boost::asio::ip::tcp::socket &client){
-                boost::asio::streambuf write_buf;
-                std::ostream out(&write_buf);
-                if(req.path.size() != 0){
-                    if(router[req.path].find(req.method) != router[req.path].end()){
-                        add_header(out,200);
-                        router[req.path][req.method](req,out);
-                    }else{
-                        //404
-                        not_found(out);
-                    }
-                }else{
-                    if(default_router.find(req.method) != default_router.end()){
-                        //返回默认页面
-                        add_header(out,200);
-                        default_router[req.method](req,out);
-                    }else{
-                        //404
-                        not_found(out);
-                    }
-                }
-                out.flush();
-                //返回信息
-                boost::asio::write(client,write_buf);             
-            }         
-            /* 处理请求 */
-            void process(boost::asio::ip::tcp::socket &client){
-                /*
-                std::cout<<"进入process方法"<<std::endl;
-                boost::asio::streambuf read_buf;   
-                char *s_c = new char[1024]; 
-                //boost::asio::buffer(s_c,1024)
-                boost::asio::async_read_until(client,boost::asio::buffer(s_c,1024),"\r\n\r\n",
-                    [](const boost::system::error_code &e, std::size_t cnt){
-                        if(!e)
-                            std::cout<<"读入完成"<<std::endl;
-                        else
-                            std::cout<<"出现错误"<<std::endl;
+            /* 连接的方法 */
+            void do_accept(Acceptor &server,Ios &ios){
+                Socket *client = new Socket(ios);
+                std::cout<<"服务器等待建立连接。。。"<<std::endl;
+                server.async_accept(*client,
+                    [&server,&ios,client,this](const boost::system::error_code &ec){
+                        if(ec){
+                            std::cout<<"连接失败:"<<ec.message()<<std::endl;
+                        }else{
+                            std::cout<<"一个客户端建立连接"<<std::endl;
+                            do_accept(server,ios);
+                            process(*client);
+                        }
                     }
                 );
-                /*
-                    [&client,&read_buf,this](const boost::system::error_code &e, std::size_t cnt){
-                        std::cout<<"读入完成"<<std::endl;
-                        if(!e){
-                            std::size_t total = read_buf.size();
-                            std::istream in(&read_buf);
+            }
+            /* 处理请求 */
+            void process(Socket &client){
+                std::cout<<"进入process方法"<<std::endl;
+                boost::asio::streambuf *read_buf = new boost::asio::streambuf;
+                std::cout<<"read_until之前"<<std::endl;
+                boost::asio::async_read_until(client,*read_buf,"\r\n\r\n",
+                    [&client,read_buf,this](const boost::system::error_code &ec,std::size_t cnt){
+                        if(ec){
+                            std::cout<<"读入错误："<<ec.message()<<std::endl;
+                        }else{
+                            std::size_t total = read_buf->size();
+                            std::istream in(read_buf);
                             Request req;
                             std::cout<<"开始解析请求信息"<<std::endl;
-                            req.parse(in);
+                            req.parse_from_istream(in);
                             std::cout<<"解析请求信息完成"<<std::endl;
                             if(req.has_attribute("Content-Length")){
                                 size_t rest = stoull(req.get_attribute("Content-Length"));
-                                boost::asio::read(client,read_buf,
+                                boost::asio::read(client,*read_buf,
                                     boost::asio::transfer_exactly(rest - (total - cnt)));
-                                std::istream i(&read_buf);
+                                std::istream i(read_buf);
                                 req.parse_parameters(i);
                             }
                             do_response(req,client);
-                        }else{
-                            std::cout<<"error occur"<<std::endl;
+                            delete read_buf;
+                            process(client);
                         }
-                  
-                });
-                  */    
-                  Request req;
-                  do_response(req,client);
+                    }
+                );
+                std::cout<<"read_until之后"<<std::endl;
             }
+            /* 做出响应 */
+            void do_response(const Request &req, Socket &client){
+                std::cout<<"进入do_response方法"<<std::endl;
+                Response rsp;
+                if(req.path.size() != 0){
+                    if(router[req.path].find(req.method) != router[req.path].end()){
+                        router[req.path][req.method](req,rsp);
+                        rsp.send(client);
+                    }else{
+                        rsp.not_found(client);
+                    }
+                }else{
+                    if(default_router.find(req.method) != default_router.end()){
+                        default_router[req.method](req,rsp);
+                        rsp.send(client);
+                    }else{
+                        rsp.not_found(client);
+                    }
+                }     
+                std::cout<<"离开do_response方法"<<std::endl;
+            } 
             //用户自定义路由
             std::unordered_map<std::string,std::unordered_map<std::string,
                 std::function<void(const Request &req, std::ostream &o)> > > router;
