@@ -1,6 +1,9 @@
 /*
  *请求类
  */
+#ifndef WEBSERVER_HEAD_REQUEST
+#define WEBSERVER_HEAD_REQUEST
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -29,3 +32,4 @@ namespace webserver{
         void split(const std::string &, char , std::vector<std::string> &);
     };
 }
+#endif
