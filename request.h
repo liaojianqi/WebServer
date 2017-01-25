@@ -12,7 +12,18 @@
 namespace webserver{
     class Request{
     public:
-        std::string method, path, version;//请求方法，请求路径，http版本     
+        /* 获取请求方法 */
+        std::string get_method() const{
+            return method;
+        }
+        /* 获取请求路径 */
+        std::string get_path() const{
+            return path;
+        }
+        /* 获取请求版本号 */
+        std::string get_version() const{
+            return version;
+        }
         /* 解析请求 */
         void parse_from_istream(std::istream &);
         /* 解析post参数 */
@@ -26,8 +37,12 @@ namespace webserver{
         /* 返回指定参数 */
         std::string get_parameter(const std::string &) const;     
     private:
-        std::unordered_map<std::string,std::string> header;//请求头信息
-        std::unordered_map<std::string,std::string> parameter;//请求参数
+        //请求方法，请求路径，http版本     
+        std::string method, path, version;
+        //请求头信息
+        std::unordered_map<std::string,std::string> header;
+        //请求参数
+        std::unordered_map<std::string,std::string> parameter;
         /* 工具函数，切割字符串 */
         void split(const std::string &, char , std::vector<std::string> &);
     };

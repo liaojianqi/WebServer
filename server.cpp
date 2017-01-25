@@ -71,21 +71,27 @@ namespace webserver{
     void Server::do_response(const Request &req, Socket &client){
         std::cout<<"进入do_response方法"<<std::endl;
         Response rsp;
-        if(req.path.size() != 0){
-            if(router[req.path].find(req.method) != router[req.path].end()){
-                router[req.path][req.method](req,rsp);
-                rsp.send(client);
+        if(req.get_path().size() != 0){
+            if(router[req.get_path()].find(req.get_method()) != router[req.get_path()].end()){
+                router[req.get_path()][req.get_method()](req,rsp.get_ostream());
             }else{
-                rsp.not_found(client);
+                rsp.not_found();
             }
         }else{
-            if(default_router.find(req.method) != default_router.end()){
-                default_router[req.method](req,rsp);
-                rsp.send(client);
+            if(default_router.find(req.get_method()) != default_router.end()){
+                default_router[req.get_method()](req,rsp.get_ostream());
             }else{
-                rsp.not_found(client);
+                rsp.not_found();
             }
         }     
+        std::string content = rsp.get_content();
+        boost::asio::async_write(client,boost::asio::buffer(content),
+            [](const boost::system::error_code &ec, std::size_t len){
+                if(ec){
+                    std::cout<<"写信息错误！"<<std::endl;            
+                }
+            }
+        );
         std::cout<<"离开do_response方法"<<std::endl;
     } 
 }

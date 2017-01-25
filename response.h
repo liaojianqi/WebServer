@@ -6,21 +6,27 @@
 
 #include <iostream>
 #include <sstream>
-#include "boost/asio.hpp"
 
 namespace webserver{
-    class Response:public std::ostream{
+    class Response{
     private:
-        boost::asio::streambuf buf;
+        //状态码
+        int status_code = 200;
+        //http响应报文头信息
         std::stringstream header;
+        //响应正文内容
+        std::ostringstream content;
     public:
-        Response():std::ostream(&buf){}
+        /* 获取输出流 */
+        std::ostream& get_ostream(){
+            return content;
+        }
         /* 添加http头信息 */
-        void add_header(int status_code,size_t content_length);
+        void add_header(std::string::size_type content_length);
         /* 404 not found */
-        void not_found(boost::asio::ip::tcp::socket &client);
-        /* 发送信息 */
-        void send(boost::asio::ip::tcp::socket &client);
+        void not_found();
+        /* 获取响应信息 */
+        std::string get_content();
     };
 }
 #endif

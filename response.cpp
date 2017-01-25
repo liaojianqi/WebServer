@@ -1,11 +1,10 @@
 #include <iostream>
 #include <sstream>
-#include "boost/asio.hpp"
 #include "response.h"
 
 namespace webserver{
     /* 添加http头信息 */
-    void Response::add_header(int status_code,size_t content_length){
+    void Response::add_header(std::string::size_type content_length){
         header<<"HTTP/1.1 "<<status_code;
         switch(status_code){
             case 200:header<<" OK\r\n";break;
@@ -17,18 +16,17 @@ namespace webserver{
         header<<"\r\n";
     }
     /* 404 not found */
-    void Response::not_found(boost::asio::ip::tcp::socket &client){
-        add_header(404,79);
-        header<<"<html><head></head><body><h1 align = 'center'>404 Not found!</h1></body></html>";
-        boost::asio::write(client,boost::asio::buffer(header.str()));       
+    void Response::not_found(){
+        content<<"<html><head></head><body><h1 align = 'center'>"
+               <<"404 Not found!</h1></body></html>";
+        status_code = 404;
     }
-    /* 发送信息 */
-    void Response::send(boost::asio::ip::tcp::socket &client){
-        this->flush();
-        size_t content_length = buf.size();
-        add_header(200,content_length);
-        boost::asio::write(client,boost::asio::buffer(header.str())); 
-        boost::asio::write(client,buf); 
+    /* 获取响应信息 */
+    std::string Response::get_content(){
+        std::string _content = content.str();
+        add_header(_content.size());
+        header<<_content;
+        return header.str();
     }
 }
 
