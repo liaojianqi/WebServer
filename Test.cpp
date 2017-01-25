@@ -3,7 +3,7 @@
 using namespace webserver;
  
 int main(){
-    unsigned int port = 8888;
+    webserver::Server::size_t port = 8888;
     //1. 初始化
     Server server(port);
     //2. 设置路由

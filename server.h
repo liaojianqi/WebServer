@@ -18,12 +18,11 @@ namespace webserver{
     typedef boost::asio::ip::tcp::acceptor Acceptor;
     typedef boost::asio::ip::tcp::socket Socket;
     class Server{
-        private:
-            //监听端口
-            const unsigned short port;           
         public:
+            //端口类型
+            typedef unsigned short size_t;
             /* 构造方法 */
-            Server(unsigned short _port):port(_port){}
+            Server(size_t _port):port(_port){}
             /* 启动服务器 */
             void start();
             /* 连接的方法 */
@@ -38,6 +37,9 @@ namespace webserver{
             //用户自定义默认路由
             std::unordered_map<std::string,
                 std::function<void(const Request &req, std::ostream &o)> > default_router;
+            private:
+            //监听端口
+            const size_t port;          
     };
 }
 #endif
