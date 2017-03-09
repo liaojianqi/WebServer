@@ -104,6 +104,7 @@ namespace webserver{
     void Server::do_response(const Request &req, Socket &client){
         std::cout<<"进入do_response方法"<<std::endl;
         Response rsp;
+        /* TO DO:先要检查router中有req.get_path() */
         if(req.get_path().size() != 0){
             if(router[req.get_path()].find(req.get_method()) != router[req.get_path()].end()){
                 router[req.get_path()][req.get_method()](req,rsp.get_ostream());
